@@ -1,0 +1,20 @@
+version: '3'
+services:
+  mongodb:
+    image: mongo
+    ports:
+      - "27017:27017"
+  backend:
+    build: ./Back-end
+    ports:
+      - "4000:4000"
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/ordoro
+    depends_on:
+      - mongodb
+  frontend:
+    build: ./Frount-end
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
