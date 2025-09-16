@@ -1,12 +1,44 @@
 import { FaLock } from "react-icons/fa";
 import { Link , useNavigate } from "react-router-dom";
-
-
-//const navigate = useNavigate();
+import { useState } from "react";
 
 function Login() {
-    return(
-        <>
+  const [form, setForm] = useState({
+    email: "",
+    password: ""
+  });
+  const navigate = useNavigate();
+
+  const handleInputChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    fetch('http://localhost:4000/api/login', {
+      method: "POST",
+      headers: {
+        "Content-type": "application/json",
+      },
+      body: JSON.stringify(form),
+    })
+      .then(async (res) => {
+        if (res.ok) {
+          // Optionally store user info here
+          navigate("/");
+        } else {
+          const data = await res.text();
+          alert(data || "Login failed");
+        }
+      })
+      .catch((err) => {
+        alert("Login failed");
+        console.log(err);
+      });
+  };
+
+  return(
+    <>
       <div className="grid grid-cols-1 sm:grid-cols-2 h-screen items-center place-items-center">
         <div className="flex justify-center">
           <img src={require("../assets/signup.jpg")} alt="" />
@@ -24,7 +56,7 @@ function Login() {
               Sign In  Test 
             </h2>
           </div>
-          <form className="mt-8 space-y-6" >
+          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
             {/* <input type="hidden" name="remember" defaultValue="true" /> */}
             <div className="rounded-md shadow-sm space-y-6">
               <div>
@@ -39,7 +71,8 @@ function Login() {
                   required
                   className="relative block w-full rounded-md border-0 py-3 px-4 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-base sm:leading-6"
                   placeholder="Email address"
-                 
+                  value={form.email}
+                  onChange={handleInputChange}
                 />
               </div>
               <div className="relative">
@@ -54,6 +87,8 @@ function Login() {
                   required
                   className="relative block w-full rounded-md border-0 py-3 px-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-base sm:leading-6"
                   placeholder="Password"
+                  value={form.password}
+                  onChange={handleInputChange}
                 />
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                   <FaLock className="text-gray-400" />
