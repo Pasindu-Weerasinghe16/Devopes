@@ -24,19 +24,19 @@ function Register() {
 
 
   const registerUser = () => {
-    fetch('http://localhost:4000/api/register', {
-            method: "POST",
-            headers : {
-                "Content-type": "application/json",
-            },
-            body: JSON.stringify(form),
-        })
-        .then((result) => {
-            alert("Successfully Registered, Now Login with your details");
-            navigate('./login')
-        })
-        .catch((err) => console.log(err));
-    };
+  fetch('http://localhost:4000/api/register', {
+    method: "POST",
+    headers: {
+      "Content-type": "application/json",
+    },
+    body: JSON.stringify(form),
+  })
+    .then((result) => {
+      alert("Successfully Registered, Now Login with your details");
+      navigate("/login"); // Use absolute path
+    })
+    .catch((err) => console.log(err));
+  };
 
     const uploadImage = async (image) => {
         const data = new FormData();
