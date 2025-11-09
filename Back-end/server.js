@@ -43,6 +43,36 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
+// --- Development stub endpoints for dashboard metrics ---
+// Replace static/mock data with real queries as you implement the related models.
+app.get('/api/sales/get/:user/totalsaleamount', (req, res) => {
+  res.json({ totalSaleAmount: 12500 });
+});
+
+app.get('/api/purchase/get/:user/totalpurchaseamount', (req, res) => {
+  res.json({ totalPurchaseAmount: 9320 });
+});
+
+app.get('/api/store/get/:user', (req, res) => {
+  res.json([
+    { id: 1, name: 'Central Store' },
+    { id: 2, name: 'East Branch' }
+  ]);
+});
+
+app.get('/api/product/get/:user', (req, res) => {
+  res.json([
+    { id: 'p1', name: 'Shirt' },
+    { id: 'p2', name: 'Notebook' },
+    { id: 'p3', name: 'Laptop' },
+    { id: 'p4', name: 'Carrots' }
+  ]);
+});
+
+app.get('/api/sales/getmonthly', (req, res) => {
+  res.json({ salesAmount: [10,20,40,50,60,20,10,35,45,70,25,70] });
+});
+
 
 app.post("/api/register", (req, res) => {
   let registerUser = new User({
