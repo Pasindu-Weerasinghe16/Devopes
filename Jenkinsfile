@@ -65,17 +65,20 @@ pipeline {
           string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
         ]) {
           dir("${TF_DIR}") {
-            sh '''
-              set -e
-              if [ -z "${EC2_KEY_NAME}" ]; then
-                echo "ERROR: EC2_KEY_NAME is required"
-                exit 1
-              fi
-              terraform init -input=false
-              terraform apply -auto-approve -input=false \
-                -var "key_name=${EC2_KEY_NAME}"
-              terraform output -raw app_public_ip > ../../.app_ip
-            '''
+            script {
+              def keyName = (params.EC2_KEY_NAME ?: '').trim()
+              if (!keyName) {
+                keyName = 'my-new-key'
+              }
+              sh """
+                set -e
+                echo "Using EC2_KEY_NAME=${keyName}"
+                terraform init -input=false
+                terraform apply -auto-approve -input=false \
+                  -var "key_name=${keyName}"
+                terraform output -raw app_public_ip > ../../.app_ip
+              """
+            }
           }
         }
       }
@@ -90,13 +93,17 @@ pipeline {
           script {
             def imageTag = sh(script: "cat .image_tag | cut -d= -f2", returnStdout: true).trim()
             def appIp = sh(script: "cat .app_ip", returnStdout: true).trim()
+            def sshUser = (params.SSH_USER ?: '').trim()
+            if (!sshUser) {
+              sshUser = 'ubuntu'
+            }
             sh """
               set -e
 
               mkdir -p ${ANSIBLE_DIR}/inventory
               cat > ${ANSIBLE_DIR}/inventory/hosts.ini <<EOF
               [app]
-              ${appIp} ansible_user=${SSH_USER}
+              ${appIp} ansible_user=${sshUser}
               EOF
 
               export DOCKERHUB_USER='${DOCKERHUB_USER}'
