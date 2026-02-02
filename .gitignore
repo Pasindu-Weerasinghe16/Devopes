@@ -1,1 +1,14 @@
 /node_modules
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+# Jenkins scratch files
+.image_tag
+.app_ip
+
+# Ansible
+*.retry

@@ -1,0 +1,108 @@
+---
+- name: Deploy Devopes containers on EC2
+  hosts: app
+  become: true
+  vars:
+    app_dir: /opt/devopes
+    dockerhub_user: "{{ lookup('env', 'DOCKERHUB_USER') | default('dockerpasindu', true) }}"
+    image_tag: "{{ lookup('env', 'IMAGE_TAG') | default('latest', true) }}"
+    docker_apt_arch_map:
+      x86_64: amd64
+      aarch64: arm64
+  tasks:
+    - name: Install apt prerequisites
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        update_cache: true
+
+    - name: Ensure /etc/apt/keyrings exists
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Add Docker official GPG key
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: "0644"
+
+    - name: Add Docker apt repository
+      ansible.builtin.apt_repository:
+        repo: "deb [arch={{ docker_apt_arch_map.get(ansible_architecture, 'amd64') }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
+        filename: docker
+        state: present
+
+    - name: Install Docker Engine + Compose plugin
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        update_cache: true
+
+    - name: Ensure Docker is running
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Ensure app directory exists
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Copy production compose file
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../docker-compose.prod.yml"
+        dest: "{{ app_dir }}/docker-compose.prod.yml"
+        mode: "0644"
+
+    - name: Write .env for compose (image tag + dockerhub user)
+      ansible.builtin.copy:
+        dest: "{{ app_dir }}/.env"
+        mode: "0600"
+        content: |
+          DOCKERHUB_USER={{ dockerhub_user }}
+          IMAGE_TAG={{ image_tag }}
+
+    - name: Stop existing stack (if any)
+      ansible.builtin.command:
+        cmd: docker compose -f docker-compose.prod.yml down --remove-orphans
+        chdir: "{{ app_dir }}"
+      changed_when: true
+      failed_when: false
+
+    - name: Clean old docker images (safe prune)
+      ansible.builtin.command:
+        cmd: docker image prune -af
+      changed_when: true
+
+    - name: Pull latest images
+      ansible.builtin.command:
+        cmd: docker compose -f docker-compose.prod.yml pull
+        chdir: "{{ app_dir }}"
+      changed_when: true
+
+    - name: Start stack
+      ansible.builtin.command:
+        cmd: docker compose -f docker-compose.prod.yml up -d
+        chdir: "{{ app_dir }}"
+      changed_when: true
+
+    - name: Show running containers
+      ansible.builtin.command:
+        cmd: docker ps
+      register: docker_ps
+      changed_when: false
+
+    - name: Print running containers
+      ansible.builtin.debug:
+        var: docker_ps.stdout_lines

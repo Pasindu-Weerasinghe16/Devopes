@@ -4,6 +4,9 @@ import { useState } from "react";
 
 import { Result } from "postcss";
 
+const API_BASE =
+  process.env.REACT_APP_API_URL || `http://${window.location.hostname}:4000`;
+
 function Register() {
 
     const [form , setFrom] = useState({
@@ -24,7 +27,7 @@ function Register() {
 
 
   const registerUser = () => {
-  fetch('http://localhost:4000/api/register', {
+  fetch(`${API_BASE}/api/register`, {
     method: "POST",
     headers: {
       "Content-type": "application/json",
@@ -43,7 +46,7 @@ function Register() {
         data.append("file" , image);
         data.append("upload_preset" , "inventoryapp");
 
-        await fetch("http://localhost:4000/api/UploadImage",{
+        await fetch(`${API_BASE}/api/upload-image`,{
             method : "POST",
             body : data,
         })

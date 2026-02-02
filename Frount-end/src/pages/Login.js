@@ -2,6 +2,9 @@ import { FaLock } from "react-icons/fa";
 import { Link , useNavigate } from "react-router-dom";
 import { useState } from "react";
 
+const API_BASE =
+  process.env.REACT_APP_API_URL || `http://${window.location.hostname}:4000`;
+
 function Login() {
   const [form, setForm] = useState({
     email: "",
@@ -15,7 +18,7 @@ function Login() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    fetch('http://localhost:4000/api/login', {
+    fetch(`${API_BASE}/api/login`, {
       method: "POST",
       headers: {
         "Content-type": "application/json",
