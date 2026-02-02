@@ -6,7 +6,7 @@ pipeline {
   }
 
   parameters {
-    string(name: 'EC2_KEY_NAME', defaultValue: '', description: 'REQUIRED: Existing AWS EC2 key pair name (Terraform var.key_name)')
+    string(name: 'EC2_KEY_NAME', defaultValue: 'my-new-key', description: 'Existing AWS EC2 key pair name (Terraform var.key_name). Default is set for webhook-triggered builds.')
     string(name: 'SSH_USER', defaultValue: 'ubuntu', description: 'SSH username for the EC2 instance')
     booleanParam(name: 'DESTROY_AFTER', defaultValue: false, description: 'Destroy AWS infra after deploy')
   }
