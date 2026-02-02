@@ -97,24 +97,25 @@ pipeline {
             if (!sshUser) {
               sshUser = 'ubuntu'
             }
-            sh """
-              set -e
+            withEnv([
+              "APP_IP=${appIp}",
+              "SSH_USER=${sshUser}",
+              "DOCKERHUB_USER=${env.DOCKERHUB_USER}",
+              "IMAGE_TAG=${imageTag}",
+              "ANSIBLE_CONFIG=${env.ANSIBLE_DIR}/ansible.cfg"
+            ]) {
+              sh '''
+                set -e
 
-              mkdir -p ${ANSIBLE_DIR}/inventory
-              cat > ${ANSIBLE_DIR}/inventory/hosts.ini <<EOF
-              [app]
-              ${appIp} ansible_user=${sshUser}
-              EOF
+                mkdir -p "$ANSIBLE_DIR/inventory"
+                printf "[app]\n%s ansible_user=%s\n" "$APP_IP" "$SSH_USER" > "$ANSIBLE_DIR/inventory/hosts.ini"
 
-              export DOCKERHUB_USER='${DOCKERHUB_USER}'
-              export IMAGE_TAG='${imageTag}'
-              export ANSIBLE_CONFIG='${ANSIBLE_DIR}/ansible.cfg'
-
-              ansible-playbook \
-                --private-key "${SSH_KEY_FILE}" \
-                -i ${ANSIBLE_DIR}/inventory/hosts.ini \
-                ${ANSIBLE_DIR}/playbooks/deploy.yml
-            """
+                ansible-playbook \
+                  --private-key "$SSH_KEY_FILE" \
+                  -i "$ANSIBLE_DIR/inventory/hosts.ini" \
+                  "$ANSIBLE_DIR/playbooks/deploy.yml"
+              '''
+            }
           }
         }
       }
