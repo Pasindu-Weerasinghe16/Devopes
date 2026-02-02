@@ -33,7 +33,7 @@ data "aws_ami" "ubuntu" {
 }
 
 resource "aws_security_group" "app" {
-  name        = "${var.project_name}-app-sg"
+  name_prefix = "${var.project_name}-app-sg-"
   description = "Security group for Devopes app server"
   vpc_id      = data.aws_vpc.default.id
 
