@@ -6,6 +6,8 @@ Goal: when you `git push` to GitHub, Jenkins runs automatically:
 3) Provision/update an EC2 server (Terraform)
 4) Deploy containers to EC2 (Ansible + `docker compose`)
 
+ssh -i ~/.ssh/my-new-key.pem ubuntu@3.89.164.111
+
 This repo already contains:
 - `docker-compose.prod.yml` (production compose pulling images from Docker Hub)
 - `terraform/aws/` (creates 1 EC2 + security group)

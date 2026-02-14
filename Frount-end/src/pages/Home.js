@@ -88,7 +88,7 @@ function ModernInventoryDashboard() {
               <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
                 Inventory Hub
               </h1>
-              <p className="text-sm text-gray-500 mt-1">Manage your products baddly</p>
+              <p className="text-sm text-gray-500 mt-1">Manage your products</p>
             </div>
             <button
               onClick={handleAdd}
