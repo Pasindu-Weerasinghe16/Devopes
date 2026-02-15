@@ -102,7 +102,8 @@ app.post("/api/register", (req, res) => {
 });
 // Auth middleware for inventory endpoints
 function requireAuth(req, res, next) {
-  const token = req.headers["authorization"];
+  const authHeader = req.headers["authorization"];
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : authHeader;
   if (token && userAuthCheck[token]) {
     req.userId = token;
     return next();
