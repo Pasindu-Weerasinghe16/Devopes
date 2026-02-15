@@ -2,6 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const  {User} = require('./models/users');
+const inventoryRouter = require('./router/inventory');
 
 // Set up multer for file uploads
 
@@ -13,6 +14,7 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+
 app.use(cors());
 app.use(express.json());
 
@@ -23,7 +25,9 @@ mongoose.connect(mongoURI, {
   useUnifiedTopology: true,
 });
 
-let userAuthCheck;
+
+// Simple session simulation (for demo, use JWT or session in production)
+let userAuthCheck = {};
 app.post("/api/login", async (req, res) => {
   try {
     const user = await User.findOne({
@@ -31,11 +35,10 @@ app.post("/api/login", async (req, res) => {
       password: req.body.password,
     });
     if (user) {
-      res.send(user);
-      userAuthCheck = user;
+      userAuthCheck[user._id] = true;
+      res.send({ ...user.toObject(), token: user._id });
     } else {
       res.status(401).send("Invalid Credentials");
-      userAuthCheck = null;
     }
   } catch (error) {
     console.log(error);
@@ -74,6 +77,7 @@ app.get('/api/sales/getmonthly', (req, res) => {
 });
 
 
+
 app.post("/api/register", (req, res) => {
   let registerUser = new User({
     firstName: req.body.firstName,
@@ -87,7 +91,8 @@ app.post("/api/register", (req, res) => {
   registerUser
     .save()
     .then((result) => {
-      res.status(200).send(result);
+      userAuthCheck[result._id] = true;
+      res.status(200).send({ ...result.toObject(), token: result._id });
       console.log("Signup Successfull");
     })
     .catch((err) => {
@@ -95,6 +100,18 @@ app.post("/api/register", (req, res) => {
       res.status(500).send({ error: "Registration failed", details: err });
     });
 });
+// Auth middleware for inventory endpoints
+function requireAuth(req, res, next) {
+  const token = req.headers["authorization"];
+  if (token && userAuthCheck[token]) {
+    req.userId = token;
+    return next();
+  }
+  return res.status(401).json({ error: "Unauthorized" });
+}
+
+// Inventory API (protected)
+app.use("/api/inventory", requireAuth, inventoryRouter);
 
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
