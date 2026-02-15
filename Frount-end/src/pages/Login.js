@@ -1,6 +1,7 @@
 import { FaLock } from "react-icons/fa";
 import { Link , useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useContext, useEffect, useState } from "react";
+import AuthContext from "../AuthContext";
 
 const API_BASE =
   process.env.REACT_APP_API_URL || `http://${window.location.hostname}:4000`;
@@ -11,6 +12,13 @@ function Login() {
     password: ""
   });
   const navigate = useNavigate();
+  const { isAuthenticated, login } = useContext(AuthContext);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/inventory', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleInputChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -27,8 +35,15 @@ function Login() {
     })
       .then(async (res) => {
         if (res.ok) {
-          // Optionally store user info here
-          navigate("/");
+          const data = await res.json();
+          const token = data?.token;
+          const userId = data?._id;
+          if (!token || !userId) {
+            alert('Login succeeded but token missing');
+            return;
+          }
+          login(token, userId);
+          navigate("/inventory");
         } else {
           const data = await res.text();
           alert(data || "Login failed");

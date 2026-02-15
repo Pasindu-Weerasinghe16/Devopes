@@ -1,14 +1,48 @@
-import React, { createContext, useState } from 'react';
+import React, { createContext, useCallback, useMemo, useState } from 'react';
 
-// Simple AuthContext providing a "user" identifier used by Dashboard fetch calls.
-// Replace the default user with a real user id/email once authentication is wired.
-const AuthContext = createContext({ user: null });
+const AuthContext = createContext({
+  token: null,
+  userId: null,
+  isAuthenticated: false,
+  login: () => {},
+  logout: () => {},
+});
+
+function readStoredAuth() {
+  const token = localStorage.getItem('authToken');
+  const userId = localStorage.getItem('authUserId');
+  return { token, userId };
+}
 
 export function AuthProvider({ children }) {
-  // For now we hardcode a demo user id (could be an email or database id)
-  const [user] = useState('demoUser');
+  const stored = readStoredAuth();
+  const [token, setToken] = useState(stored.token);
+  const [userId, setUserId] = useState(stored.userId);
+
+  const login = useCallback((newToken, newUserId) => {
+    localStorage.setItem('authToken', newToken);
+    localStorage.setItem('authUserId', newUserId);
+    setToken(newToken);
+    setUserId(newUserId);
+  }, []);
+
+  const logout = useCallback(() => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('authUserId');
+    setToken(null);
+    setUserId(null);
+  }, []);
+
+  const value = useMemo(() => ({
+    token,
+    userId,
+    isAuthenticated: Boolean(token),
+    login,
+    logout,
+  }), [token, userId, login, logout]);
+
   return (
-    <AuthContext.Provider value={{ user }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

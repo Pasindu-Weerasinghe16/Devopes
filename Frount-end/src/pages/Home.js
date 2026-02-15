@@ -1,14 +1,55 @@
-import React, { useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import AuthContext from "../AuthContext";
 // Removed lucide-react dependency to avoid module not found error; using simple Unicode / fallback SVG icons.
 
+const API_BASE =
+  process.env.REACT_APP_API_URL || `http://${window.location.hostname}:4000`;
+
 function ModernInventoryDashboard() {
-  const [products, setProducts] = useState([
-    { id: 1, name: "Wireless Headphones", sku: "WH-2024-001", stock: 145, category: "Electronics", price: 89.99, status: "In Stock", lastUpdated: "2024-11-05" },
-    { id: 2, name: "Organic Coffee Beans", sku: "CF-2024-002", stock: 23, category: "Groceries", price: 24.99, status: "Low Stock", lastUpdated: "2024-11-06" },
-    { id: 3, name: "Yoga Mat Premium", sku: "YM-2024-003", stock: 0, category: "Sports", price: 45.00, status: "Out of Stock", lastUpdated: "2024-11-07" },
-    { id: 4, name: "LED Desk Lamp", sku: "DL-2024-004", stock: 89, category: "Furniture", price: 34.99, status: "In Stock", lastUpdated: "2024-11-08" },
-    { id: 5, name: "Ceramic Dinner Set", sku: "DS-2024-005", stock: 56, category: "Kitchen", price: 129.99, status: "In Stock", lastUpdated: "2024-11-08" },
-  ]);
+  const [products, setProducts] = useState([]);
+  const { token, logout } = useContext(AuthContext);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!token) {
+      navigate('/login', { replace: true });
+      return;
+    }
+
+    fetch(`${API_BASE}/api/inventory`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(async (res) => {
+        if (res.status === 401) {
+          logout();
+          navigate('/login', { replace: true });
+          return;
+        }
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(txt || 'Failed to load inventory');
+        }
+        const data = await res.json();
+        const normalized = (Array.isArray(data) ? data : []).map((item) => ({
+          id: item._id,
+          name: item.name,
+          sku: item.sku,
+          stock: item.stock,
+          category: item.category,
+          price: item.price,
+          status: item.status,
+          lastUpdated: item.lastUpdated || (item.updatedAt ? String(item.updatedAt).slice(0, 10) : ''),
+        }));
+        setProducts(normalized);
+      })
+      .catch((err) => {
+        console.log(err);
+        alert('Failed to load inventory');
+      });
+  }, [token, logout, navigate]);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -41,7 +82,29 @@ function ModernInventoryDashboard() {
   };
 
   const handleDelete = (id) => {
-    setProducts(products.filter(p => p.id !== id));
+    if (!token) return;
+    fetch(`${API_BASE}/api/inventory/${id}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(async (res) => {
+        if (res.status === 401) {
+          logout();
+          navigate('/login', { replace: true });
+          return;
+        }
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(txt || 'Delete failed');
+        }
+        setProducts((prev) => prev.filter((p) => p.id !== id));
+      })
+      .catch((err) => {
+        console.log(err);
+        alert('Delete failed');
+      });
   };
 
   const handleSubmit = () => {
@@ -50,17 +113,62 @@ function ModernInventoryDashboard() {
       return;
     }
 
-    if (editingProduct) {
-      setProducts(products.map(p => p.id === editingProduct.id ? { ...formData, id: p.id, lastUpdated: new Date().toISOString().split('T')[0] } : p));
-    } else {
-      const newProduct = {
-        ...formData,
-        id: Math.max(...products.map(p => p.id)) + 1,
-        lastUpdated: new Date().toISOString().split('T')[0]
-      };
-      setProducts([...products, newProduct]);
-    }
-    setShowModal(false);
+    if (!token) return;
+
+    const payload = {
+      name: formData.name,
+      sku: formData.sku,
+      category: formData.category,
+      stock: Number(formData.stock),
+      price: Number(formData.price),
+    };
+
+    const isEdit = Boolean(editingProduct?.id);
+    const url = isEdit ? `${API_BASE}/api/inventory/${editingProduct.id}` : `${API_BASE}/api/inventory`;
+    const method = isEdit ? 'PUT' : 'POST';
+
+    fetch(url, {
+      method,
+      headers: {
+        'Content-type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    })
+      .then(async (res) => {
+        if (res.status === 401) {
+          logout();
+          navigate('/login', { replace: true });
+          return null;
+        }
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(txt || 'Save failed');
+        }
+        return res.json();
+      })
+      .then((saved) => {
+        if (!saved) return;
+        const normalized = {
+          id: saved._id,
+          name: saved.name,
+          sku: saved.sku,
+          stock: saved.stock,
+          category: saved.category,
+          price: saved.price,
+          status: saved.status,
+          lastUpdated: saved.lastUpdated || '',
+        };
+        setProducts((prev) => {
+          if (isEdit) return prev.map((p) => (p.id === normalized.id ? normalized : p));
+          return [normalized, ...prev];
+        });
+        setShowModal(false);
+      })
+      .catch((err) => {
+        console.log(err);
+        alert('Save failed');
+      });
   };
 
   const filteredProducts = products.filter(p => 
@@ -90,13 +198,24 @@ function ModernInventoryDashboard() {
               </h1>
               <p className="text-sm text-gray-500 mt-1">Manage your products</p>
             </div>
-            <button
-              onClick={handleAdd}
-              className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-5 py-2.5 rounded-xl hover:shadow-lg transition-all duration-200 hover:scale-105"
-            >
-              <span className="text-lg">＋</span>
-              Add Product
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  logout();
+                  navigate('/login');
+                }}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors font-medium text-gray-700"
+              >
+                Logout
+              </button>
+              <button
+                onClick={handleAdd}
+                className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-5 py-2.5 rounded-xl hover:shadow-lg transition-all duration-200 hover:scale-105"
+              >
+                <span className="text-lg">＋</span>
+                Add Product
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -1,8 +1,7 @@
 import { FaLock } from "react-icons/fa";
 import { Link , useNavigate } from "react-router-dom";
-import { useState } from "react";
-
-import { Result } from "postcss";
+import { useContext, useEffect, useState } from "react";
+import AuthContext from "../AuthContext";
 
 const API_BASE =
   process.env.REACT_APP_API_URL || `http://${window.location.hostname}:4000`;
@@ -19,6 +18,13 @@ function Register() {
     });
 
     const navigate = useNavigate();
+    const { isAuthenticated, login } = useContext(AuthContext);
+
+    useEffect(() => {
+      if (isAuthenticated) {
+        navigate('/inventory', { replace: true });
+      }
+    }, [isAuthenticated, navigate]);
     
     const handleInputChange = (e) => {
         setFrom({ ...form, [e.target.name]: e.target.value });
@@ -34,9 +40,21 @@ function Register() {
     },
     body: JSON.stringify(form),
   })
-    .then((result) => {
-      alert("Successfully Registered, Now Login with your details");
-      navigate("/login"); // Use absolute path
+    .then(async (res) => {
+      if (!res.ok) {
+        const txt = await res.text();
+        alert(txt || 'Registration failed');
+        return;
+      }
+      const data = await res.json();
+      const token = data?.token;
+      const userId = data?._id;
+      if (!token || !userId) {
+        alert('Registration succeeded but token missing');
+        return;
+      }
+      login(token, userId);
+      navigate('/inventory');
     })
     .catch((err) => console.log(err));
   };
