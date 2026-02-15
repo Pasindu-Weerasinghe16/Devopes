@@ -71,7 +71,7 @@ function Login() {
               alt="Your Company"
             />
             <h2 className="text-3xl font-bold tracking-tight text-gray-900 font-mono text-center">
-              Sign In  Test 
+              Code Change Pasindu  
             </h2>
           </div>
           <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
